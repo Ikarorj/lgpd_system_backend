@@ -59,29 +59,39 @@ export async function runComplianceCheck(
   reply: FastifyReply,
 ): Promise<void> {
   const { extractionId } = request.params as { extractionId: string };
-  const { report, violations } =
-    await complianceService.runComplianceCheck(extractionId);
-  reply
-    .status(201)
-    .send({
-      id: report.id,
-      extraction_result_id: report.extraction_result_id,
-      compliance_score: report.compliance_score,
-      compliance_status: report.compliance_status,
-      total_violations: report.total_violations,
-      violations_by_severity: report.violations_by_severity,
-      articles_checked: report.articles_checked,
-      violations: violations.map((v) => ({
-        id: v.id,
-        violation_type: v.violation_type,
-        lgpd_article: v.lgpd_article,
-        severity: v.severity,
-        violation_category: v.violation_category,
-        extracted_value: v.extracted_value,
-        remediation_guidance: v.remediation_guidance,
-        remediation_status: v.remediation_status,
-      })),
-    });
+  try {
+    const { report, violations } =
+      await complianceService.runComplianceCheck(extractionId);
+    reply
+      .status(201)
+      .send({
+        id: report.id,
+        extraction_result_id: report.extraction_result_id,
+        compliance_score: report.compliance_score,
+        compliance_status: report.compliance_status,
+        total_violations: report.total_violations,
+        violations_by_severity: report.violations_by_severity,
+        articles_checked: report.articles_checked,
+        violations: violations.map((v) => ({
+          id: v.id,
+          violation_type: v.violation_type,
+          lgpd_article: v.lgpd_article,
+          severity: v.severity,
+          violation_category: v.violation_category,
+          extracted_value: v.extracted_value,
+          remediation_guidance: v.remediation_guidance,
+          remediation_status: v.remediation_status,
+        })),
+      });
+  } catch (err) {
+    reply
+      .status(500)
+      .send({
+        error: "COMPLIANCE_GENERATION_FAILED",
+        message: "Não foi possível gerar a conformidade. Tente novamente mais tarde.",
+        timestamp: new Date().toISOString(),
+      });
+  }
 }
 export async function updateViolationStatus(
   request: FastifyRequest,

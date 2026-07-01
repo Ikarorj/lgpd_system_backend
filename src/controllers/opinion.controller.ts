@@ -27,9 +27,16 @@ export async function generateOpinion(
   try {
     const { result, fields } =
       await extractionService.getExtractionResult(extractionId);
-    const report = await complianceService
-      .getComplianceReport(extractionId)
-      .catch(() => complianceService.runComplianceCheck(extractionId));
+    let report;
+    try {
+      report = await complianceService.getComplianceReport(extractionId);
+    } catch {
+      try {
+        report = await complianceService.runComplianceCheck(extractionId);
+      } catch {
+        report = null;
+      }
+    }
     const content = await readArtifactContent(result.artifact_id);
     const artifact = await artifactRepository.findById(result.artifact_id);
     const input = {
@@ -47,7 +54,7 @@ export async function generateOpinion(
           confidence_score: f.confidence_score,
         }),
       ),
-      compliance: {
+      compliance: report ? {
         score: report.report.compliance_score,
         status: report.report.compliance_status,
         violations: report.violations.map((v) => ({
@@ -57,6 +64,10 @@ export async function generateOpinion(
           value: v.extracted_value ?? "",
           remediation: v.remediation_guidance,
         })),
+      } : {
+        score: 0,
+        status: "INSUFFICIENT_DATA",
+        violations: [],
       },
     };
     const opinion = await opinionService.generate(input);

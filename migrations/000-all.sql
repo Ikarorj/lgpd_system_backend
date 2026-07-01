@@ -220,7 +220,15 @@ DO $$ BEGIN
     'unsafe_third_party_sharing',
     'sensitive_data_without_consent',
     'missing_dpo_contact',
-    'unsafe_international_transfer'
+    'unsafe_international_transfer',
+    'missing_processing_purpose',
+    'invalid_consent',
+    'invalid_legitimate_interest',
+    'missing_deletion_mechanism',
+    'missing_governance_program',
+    'missing_impact_report',
+    'missing_incident_communication',
+    'missing_privacy_by_design'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
