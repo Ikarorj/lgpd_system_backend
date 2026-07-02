@@ -84,11 +84,12 @@ export async function runComplianceCheck(
         })),
       });
   } catch (err) {
+    request.log.error({ err, extractionId }, "Compliance check failed");
     reply
       .status(500)
       .send({
         error: "COMPLIANCE_GENERATION_FAILED",
-        message: "Não foi possível gerar a conformidade. Tente novamente mais tarde.",
+        message: `Erro ao gerar conformidade: ${(err as Error).message}`,
         timestamp: new Date().toISOString(),
       });
   }

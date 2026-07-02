@@ -15,6 +15,7 @@ export interface FileValidationResult {
 }
 export interface ValidatedFile {
   filename: string;
+  mimetype: string;
   format: string;
   size_bytes: number;
   data: Buffer;
@@ -59,6 +60,7 @@ export class FileValidatorService {
         const format = detectFormat(file.filename);
         validatedFiles.push({
           filename: file.filename,
+          mimetype: file.mimetype,
           format: format ?? "UNKNOWN",
           size_bytes: file.size,
           data: file.data,

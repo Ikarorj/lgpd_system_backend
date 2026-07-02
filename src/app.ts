@@ -13,6 +13,7 @@ import { registerUploadRoutes } from "./routes/uploads.routes";
 import { registerExtractionRoutes } from "./routes/extractions.routes";
 import { registerComplianceRoutes } from "./routes/compliance.routes";
 import { registerAuthRoutes } from "./routes/auth.routes";
+import { ensureStorageBucket } from "./utils/supabaseStorage";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=UTF-8",
@@ -149,9 +150,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
 async function start(): Promise<void> {
   try {
-    const uploadDir = process.env.STORAGE_UPLOAD_DIR || path.join(process.cwd(), "uploads");
-    await fs.mkdir(uploadDir, { recursive: true });
-    logger.info({ uploadDir }, "Upload directory ready");
+    await ensureStorageBucket();
 
     const app = await buildApp();
     const port = parseInt(process.env.PORT ?? "3000", 10);

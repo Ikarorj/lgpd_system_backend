@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { v4 as uuidv4 } from "uuid";
-import fs from "fs/promises";
 import path from "path";
+import { supabaseAdmin } from "../utils/supabaseAdminClient";
 import { artifactRepository } from "../repositories/artifact.repository";
 import { fileValidatorService } from "./fileValidator.service";
 import { enqueueExtraction } from "../queues/extractionQueue";
@@ -9,8 +9,8 @@ import { logger } from "../utils/loggerUtil";
 import { BadRequestError } from "../utils/errorHandlerUtil";
 import { Artifact } from "../models/artifact.model";
 import { ArtifactFormat } from "../../shared/types/apiContracts.types";
-const UPLOAD_DIR =
-  process.env.STORAGE_UPLOAD_DIR || path.join(process.cwd(), "uploads");
+
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "artifacts";
 export interface UploadFileInput {
   filename: string;
   mimetype: string;
@@ -59,9 +59,17 @@ export class ArtifactService {
       const contentHash = await this.calculateHash(validatedFile.data);
       const safeFilename = this.sanitizeFilename(validatedFile.filename);
       const storagePath = `${sessionId}/${safeFilename}`;
-      const fullPath = path.resolve(UPLOAD_DIR, storagePath);
-      await fs.mkdir(path.dirname(fullPath), { recursive: true });
-      await fs.writeFile(fullPath, validatedFile.data);
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET)
+        .upload(storagePath, validatedFile.data, {
+          contentType: validatedFile.mimetype,
+          upsert: false,
+        });
+      if (uploadError) {
+        throw new BadRequestError("Falha ao salvar arquivo no storage", {
+          error: uploadError.message,
+        });
+      }
       const artifact = await artifactRepository.create({
         filename: validatedFile.filename,
         format: validatedFile.format as ArtifactFormat,

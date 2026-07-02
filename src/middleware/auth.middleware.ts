@@ -29,6 +29,7 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
       try {
         const { data, error } = await supabase.auth.getUser(token);
         if (error || !data.user) {
+          request.log.error({ error: error?.message, hasUser: !!data?.user, tokenPrefix: token.substring(0, 20) }, "Auth verification failed");
           throw new UnauthorizedError("Token inválido ou expirado");
         }
         const email = data.user.email ?? "";

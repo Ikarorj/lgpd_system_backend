@@ -1,5 +1,4 @@
-import fs from "fs/promises";
-import path from "path";
+import { supabaseAdmin } from "../utils/supabaseAdminClient";
 import { extractionRepository } from "../repositories/extraction.repository";
 import { artifactRepository } from "../repositories/artifact.repository";
 import {
@@ -19,8 +18,8 @@ import {
 } from "../models/extraction-result.model";
 import { ExtractedField } from "../models/extracted-field.model";
 import pdfParse from "pdf-parse";
-const UPLOAD_DIR =
-  process.env.STORAGE_UPLOAD_DIR || path.join(process.cwd(), "uploads");
+
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || "artifacts";
 export class ExtractionService {
   private engine: ExtractionEngine | null = null;
   private async getEngine(): Promise<ExtractionEngine> {
@@ -224,12 +223,13 @@ export class ExtractionService {
     return { result, flaggedFields };
   }
   private async readArtifactContent(artifact: Artifact): Promise<string> {
-    const filePath = path.resolve(UPLOAD_DIR, artifact.storage_path);
-    try {
-      await fs.access(filePath);
-    } catch {
-      throw new NotFoundError(`Arquivo não encontrado: ${filePath}`);
+    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+      .from(STORAGE_BUCKET)
+      .download(artifact.storage_path);
+    if (downloadError || !fileData) {
+      throw new NotFoundError(`Arquivo não encontrado no storage: ${artifact.storage_path}`);
     }
+    const buffer = Buffer.from(await fileData.arrayBuffer());
     const textFormats = [
       "MARKDOWN",
       "TXT",
@@ -244,15 +244,13 @@ export class ExtractionService {
       "YAML",
     ];
     if (textFormats.includes(artifact.format)) {
-      return await fs.readFile(filePath, "utf-8");
+      return buffer.toString("utf-8");
     }
     if (artifact.format === "PDF") {
-      const buffer = await fs.readFile(filePath);
       const data = await pdfParse(buffer);
       return data.text;
     }
     if (artifact.format === "DOCX") {
-      const buffer = await fs.readFile(filePath);
       return await this.extractDocxText(buffer);
     }
     return `[Formato não suportado para leitura: ${artifact.format}]`;
