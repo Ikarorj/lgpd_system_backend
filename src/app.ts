@@ -45,6 +45,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (_req, body, done) => {
+    if (typeof body === "string") {
+      if (body.trim() === "") {
+        done(null, {});
+      } else {
+        try {
+          done(null, JSON.parse(body));
+        } catch (err) {
+          done(err as Error);
+        }
+      }
+    } else {
+      done(null, {});
+    }
+  });
+
   await registerCors(app);
   await app.register(rateLimit, {
     max: 100,
@@ -78,45 +94,53 @@ export async function buildApp(): Promise<FastifyInstance> {
   const publicDir =
     process.env.PUBLIC_DIR || path.resolve(__dirname, "../../../../frontend/dist");
 
+  app.setNotFoundHandler(async (request, reply) => {
+    if (!isProduction) {
+      return reply.status(404).send({
+        error: "NOT_FOUND",
+        message: `Route ${request.method} ${request.url} not found`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const apiPattern = /^\/api\//;
+    if (apiPattern.test(request.url)) {
+      return reply.status(404).send({
+        error: "NOT_FOUND",
+        message: `Route ${request.method} ${request.url} not found`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const safePath = request.url.split("?")[0].replace(/\.\./g, "");
+    const filePath = path.join(publicDir, safePath);
+
+    try {
+      const stat = await fs.stat(filePath);
+      if (stat.isFile()) {
+        const ext = path.extname(filePath).toLowerCase();
+        const contentType = MIME_TYPES[ext] || "application/octet-stream";
+        const content = await fs.readFile(filePath);
+        return reply.status(200).headers({ "content-type": contentType }).send(content);
+      }
+    } catch {
+      // file not found, fall through to SPA
+    }
+
+    const indexPath = path.join(publicDir, "index.html");
+    try {
+      const content = await fs.readFile(indexPath);
+      return reply.status(200).headers({ "content-type": "text/html; charset=UTF-8" }).send(content);
+    } catch {
+      return reply.status(404).send({
+        error: "NOT_FOUND",
+        message: "Resource not found",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   if (isProduction) {
-    app.setNotFoundHandler(async (request, reply) => {
-      const apiPattern = /^\/api\//;
-      if (apiPattern.test(request.url)) {
-        return reply.status(404).send({
-          error: "NOT_FOUND",
-          message: `Route ${request.method} ${request.url} not found`,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      const safePath = request.url.split("?")[0].replace(/\.\./g, "");
-      const filePath = path.join(publicDir, safePath);
-
-      try {
-        const stat = await fs.stat(filePath);
-        if (stat.isFile()) {
-          const ext = path.extname(filePath).toLowerCase();
-          const contentType = MIME_TYPES[ext] || "application/octet-stream";
-          const content = await fs.readFile(filePath);
-          return reply.status(200).headers({ "content-type": contentType }).send(content);
-        }
-      } catch {
-        // file not found, fall through to SPA
-      }
-
-      const indexPath = path.join(publicDir, "index.html");
-      try {
-        const content = await fs.readFile(indexPath);
-        return reply.status(200).headers({ "content-type": "text/html; charset=UTF-8" }).send(content);
-      } catch {
-        return reply.status(404).send({
-          error: "NOT_FOUND",
-          message: "Resource not found",
-          timestamp: new Date().toISOString(),
-        });
-      }
-    });
-
     logger.info({ publicDir }, "Production mode: serving static files");
   }
 

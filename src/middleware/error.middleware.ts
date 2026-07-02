@@ -22,19 +22,5 @@ export async function registerErrorHandler(
     }
     return formatErrorResponse(reply, error, requestId);
   });
-  app.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply) => {
-    const requestId = (request.headers["x-request-id"] as string) ?? "";
-    logger.warn(
-      { method: request.method, url: request.url, requestId },
-      "Route not found",
-    );
-    reply
-      .status(404)
-      .send({
-        error: "NOT_FOUND",
-        message: `Route ${request.method} ${request.url} not found`,
-        timestamp: new Date().toISOString(),
-        request_id: requestId,
-      });
-  });
+
 }
