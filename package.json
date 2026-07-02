@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/app.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/src/app.js",
     "start:cluster": "node dist/cluster.js",
     "test": "jest --passWithNoTests",
