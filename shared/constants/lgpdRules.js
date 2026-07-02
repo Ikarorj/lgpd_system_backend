@@ -91,4 +91,3 @@ exports.LGPD_ARTICLES = {
     TRANSFERENCIA: ['Art. 33', 'Art. 34', 'Art. 35'],
     PENALIDADES: ['Art. 52', 'Art. 53', 'Art. 54'],
 };
-//# sourceMappingURL=lgpdRules.js.map

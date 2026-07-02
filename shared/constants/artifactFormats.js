@@ -60,4 +60,3 @@ function getFormatCategory(format) {
     }
     return 'unknown';
 }
-//# sourceMappingURL=artifactFormats.js.map
