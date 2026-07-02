@@ -11,7 +11,7 @@ export async function enqueueExtraction(
   data: ExtractionJobData,
 ): Promise<void> {
   logger.info({ artifactId: data.artifact_id }, "Iniciando extração inline");
-  const { extractionService } = await import("../services/extraction.service");
+  const { extractionService } = await import("../services/extraction.service.js");
   await extractionService.processExtraction(data.artifact_id);
 }
 export async function closeQueue(): Promise<void> {

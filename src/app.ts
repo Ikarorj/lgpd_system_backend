@@ -160,7 +160,7 @@ async function start(): Promise<void> {
     await app.listen({ port, host });
     logger.info({ port, host }, "Server started");
 
-    const { closeQueue } = await import("./queues/extractionQueue");
+    const { closeQueue } = await import("./queues/extractionQueue.js");
 
     const shutdown = async (signal: string) => {
       logger.info({ signal }, "Shutting down gracefully");
