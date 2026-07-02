@@ -22,8 +22,9 @@
     "sourceMap": true,
 
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
 
-    "types": ["node", "jest"]
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
