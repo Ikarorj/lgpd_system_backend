@@ -1,5 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { supabase } from "../utils/supabaseClient";
+import { supabaseAdmin } from "../utils/supabaseAdminClient";
+import { logger } from "../utils/loggerUtil";
 import { JwtPayload } from "../middleware/auth.middleware";
 import { UnauthorizedError } from "../utils/errorHandlerUtil";
 export async function login(
@@ -12,6 +14,7 @@ export async function login(
   }
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
+    logger.error({ error: error.message, email }, "Login failed");
     throw new UnauthorizedError("Credenciais inválidas");
   }
   reply.send({
@@ -31,20 +34,27 @@ export async function register(
   if (!email || !password) {
     return reply.status(400).send({ error: "Email e senha são obrigatórios" });
   }
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
-    options: { data: { name: name ?? email.split("@")[0] } },
+    email_confirm: true,
+    user_metadata: { name: name ?? email.split("@")[0] },
   });
   if (error) {
-    throw new UnauthorizedError("Erro ao criar conta");
+    logger.error({ error: error.message, email }, "Registration failed");
+    throw new UnauthorizedError(`Erro ao criar conta: ${error.message}`);
   }
-  if (!data.session) {
-    reply.send({ message: "Confirme seu email antes de fazer login" });
+  const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (sessionError) {
+    logger.error({ error: sessionError.message, email }, "Auto-login after registration failed");
+    reply.send({ message: "Conta criada! Faça login para continuar." });
     return;
   }
   reply.send({
-    token: data.session.access_token,
+    token: sessionData.session.access_token,
     user: {
       id: data.user!.id,
       email: data.user!.email!,
